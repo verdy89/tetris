@@ -1,0 +1,49 @@
+body {
+	background-color: #263238;
+}
+h1 {
+	color: #FFFFFF;
+}
+#keyInfo {
+	text-align: left;
+}
+p {
+	color: #FFFFFF;
+	text-align: center;
+}
+table {
+	width: 250px; /* 表の幅 元の指定は 400px */
+	height: 500px; /* 表の高さ 画面に収まるように変更 */
+	/* 中央揃えにする */
+	margin-left: auto;
+	margin-right: auto;
+	/*margin: auto;*/
+}
+
+td {
+	width: 10%; /* セルの幅 */
+	height: 5%; /* セルの高さ */
+	background-color: #455A64; /* 背景色 */
+}
+
+.i {
+	background-color: #00BCD4; /* cyan */
+}
+.o {
+	background-color: #FFEB3B; /* yellow */
+}
+.t {
+	background-color: #9C27B0; /* purple */
+}
+.s {
+	background-color: #4CAF50; /* green */
+}
+.z {
+	background-color: #F44336; /* red */
+}
+.j {
+	background-color: #2196F3; /* blue */
+}
+.l {
+	background-color: #FF9800; /* orange */
+}
