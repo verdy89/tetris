@@ -71,13 +71,13 @@ loadTable();
 document.addEventListener("keydown", onKeyDown); // キーボードイベントの監視
 
 function onKeyDown(event) {
-	if (event.keyCode === 37) { // 左矢印キーで左移動
+	if (event.keyCode === 37 && moving) { // 左矢印キーで左移動
 		moveLeft();
-	} else if (event.keyCode === 39) { // 右矢印キーで右移動
+	} else if (event.keyCode === 39 && moving) { // 右矢印キーで右移動
 		moveRight();
-	} else if (event.keyCode === 38) { // 上矢印キーで回転(未実装)
+	} else if (event.keyCode === 38 && moving) { // 上矢印キーで回転(未実装)
 		rotate();
-	} else if (event.keyCode === 40) { // 下矢印キーで落とす
+	} else if (event.keyCode === 40 && moving) { // 下矢印キーで落とす
 		fallTrough();
 	} else if (event.keyCode === 80) { // p で Pause/Restart
 		if (moving) {
