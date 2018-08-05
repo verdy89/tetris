@@ -1,4 +1,4 @@
-document.getElementById("hello_text").textContent = "はじめてのJavaScript";
+document.getElementById("hello_text").textContent = "TETRIS";
 
 /* ---------- global variables ---------- */
 
@@ -12,6 +12,7 @@ var blocks = { // ブロックのパターン
 	i: {
 		class: "i",
 		pattern: [
+			[0, 0, 0, 0],
 			[1, 1, 1, 1]
 		]
 	},
@@ -62,6 +63,8 @@ var blocks = { // ブロックのパターン
 var isFalling = false;
 var fallingBlockNum = 0;
 
+//var rotateCnt = 0;
+
 /* ---------- main ---------------------- */ 
 
 /* 初期化 */
@@ -77,6 +80,7 @@ function onKeyDown(event) {
 		moveRight();
 	} else if (event.keyCode === 38 && moving) { // 上矢印キーで回転(未実装)
 		rotate();
+		rotateCnt++;
 	} else if (event.keyCode === 40 && moving) { // 下矢印キーで落とす
 		fallTrough();
 	} else if (event.keyCode === 80) { // p で Pause/Restart
@@ -103,7 +107,7 @@ function mainLoop(){
 		document.getElementById("point").textContent = "Point = " + point; //何回目かを文字にまとめて表示する
 
 		/* ゲーム続行確認 */
-		checkGameOver();
+		//checkGameOver();
 
 		/* ブロックを落とす */
 		if (hasFallingBlock()) {
@@ -112,6 +116,8 @@ function mainLoop(){
 			deleteCompleteRow();
 			generateNewBlock();
 		}
+
+		//checkBase();
 	}, 500);
 }
 
@@ -179,6 +185,12 @@ function fallBlocks() { // ブロックを落とす
 	// 下から2番目の行から繰り返しクラスを下げていく
 	for (var row = 18; row >= 0; row--) {
 		for (var col = 0; col < 10; col++) {
+			if (cells[row][col].base) {
+				//cells[row+1][col].textContent = "b";
+				//cells[row][col].textContent = "";
+				cells[row+1][col].base = true;
+				cells[row][col].base = null;
+			}
 			if (cells[row][col].blockNum === fallingBlockNum) {
 				cells[row+1][col].className = cells[row][col].className;
 				cells[row+1][col].blockNum = cells[row][col].blockNum;
@@ -234,6 +246,15 @@ function deleteCompleteRow() { // そろった行を消す
 }
 
 function generateNewBlock() { // ランダムにブロックを生成する
+	// 0. 前のブロックの基点を削除する
+	for (var row = 0; row < 20; row++) {
+		for (var col = 0; col < 10; col++) {
+			if (cells[row][col].base) {
+				cells[row][col].base = null;
+			}
+		}
+	}
+
 	// 1. ブロックパターンからランダムに一つパターンを選ぶ
 	var keys = Object.keys(blocks);
 	var nextBlockKey = keys[Math.floor(Math.random() * keys.length)];
@@ -242,6 +263,8 @@ function generateNewBlock() { // ランダムにブロックを生成する
 
 	// 2. 選んだパターンをもとにブロックを配置する
 	var pattern = nextBlock.pattern;
+	//cells[0][3].textContent = "b"; // 回転の基点
+	cells[0][3].base = true; // 回転の基点
 	for (var row = 0; row < pattern.length; row++) {
 		for (var col = 0; col < pattern[row].length; col++) {
 			if (pattern[row][col]) {
@@ -254,6 +277,7 @@ function generateNewBlock() { // ランダムにブロックを生成する
 	// 3. 落下中のブロックがあるとする
 	isFalling = true;
 	fallingBlockNum = nextFallingBlockNum;
+	rotateCnt = 0;
 }
 
 function moveRight() { // ブロックを右に移動させる
@@ -273,6 +297,12 @@ function moveRight() { // ブロックを右に移動させる
 	}
 	for (var row = 0; row < 20; row++) {
 		for (var col = 8; col >= 0; col--) {
+			if (cells[row][col].base) {
+				//cells[row][col+1].textContent = "b";
+				//cells[row][col].textContent = null;
+				cells[row][col+1].base = true;
+				cells[row][col].base = null;
+			}
 			if (cells[row][col].blockNum === fallingBlockNum) {
 				//document.getElementById("hello_text").textContent = "はじめてのJavaScript moveRight";
 				cells[row][col+1].className = cells[row][col].className;
@@ -301,6 +331,13 @@ function moveLeft() { // ブロックを左に移動させる
 	}
 	for (var row = 0; row < 20; row++) {
 		for (var col = 1; col < 10; col++) {
+			if (cells[row][col].base) {
+				//cells[row][col-1].textContent = "b";
+				//cells[row][col].textContent = null;
+				cells[row][col-1].base = true;
+				cells[row][col].base = null;
+
+			}
 			if (cells[row][col].blockNum === fallingBlockNum) {
 				//document.getElementById("hello_text").textContent = "はじめてのJavaScript moveRight";
 				cells[row][col-1].className = cells[row][col].className;
@@ -313,11 +350,81 @@ function moveLeft() { // ブロックを左に移動させる
 }
 
 function rotate() { // ブロックを回転させる
-	//
+	// 1. ブロックの回転に関係する範囲を決める (blockRange ** 2 の範囲)
+	var blockRange = 0;
+	var initRow, initCol;
+	var blockClass;
+	for (var row = 0; row < 20; row++) {
+		for (var col = 0; col < 10; col++) {
+			if (cells[row][col].blockNum === fallingBlockNum) {
+				if (cells[row][col].className === "o") {
+					return; // 四角は回転できない
+				} else if (cells[row][col].className === "i") {
+					blockRange = 4;
+				} else {
+					blockRange = 3;
+				}
+				blockClass = cells[row][col].className
+				break;
+			}
+		}
+	}
+	// 2. 起点となるセルに移動する
+	for (var row = 0; row < 20; row++) {
+		for (var col = 0; col < 10; col++) {
+			if (cells[row][col].base) {
+				initRow = row;
+				initCol = col;
+				break;
+			}
+		}
+	}
+
+	// 3. 範囲内に別のブロックが存在しないか確認する
+	for (var i = 0; i < blockRange; i++) {
+		for (var j = 0; j < blockRange; j++) {
+			if (cells[initRow+i][initCol+j].className !== "" && cells[initRow+i][initCol+j].blockNum !== fallingBlockNum) {
+				return; // 回転不可
+			}
+		}
+	}
+
+	// 4. ブロックを回転させる
+	var rotetedBlockClass;
+	if (blockRange === 3) {
+		rotetedBlockClass = [["","",""],["","",""],["","",""]]
+	} else if (blockRange === 4) {
+		rotetedBlockClass = [["","","",""],["","","",""],["","","",""],["","","",""]]
+	}
+	for (var i = 0; i < blockRange; i++) {
+		for (var j = 0; j < blockRange; j++) {
+			rotetedBlockClass[j][blockRange-1-i] = cells[initRow+i][initCol+j].className;
+		}
+	}
+	for (var i = 0; i < blockRange; i++) {
+		for (var j = 0; j < blockRange; j++) {
+			cells[initRow+i][initCol+j].blockNum = null;
+			cells[initRow+i][initCol+j].className = rotetedBlockClass[i][j];
+			//cells[initRow+i][initCol+j].textContent = "c"
+			if (rotetedBlockClass[i][j] !== "") {
+				cells[initRow+i][initCol+j].blockNum = fallingBlockNum;
+			}
+		}
+	}	
 }
 
 function fallTrough() { // 落ちるところまで落とす
 	while(isFalling) {
 		fallBlocks();
+	}
+}
+
+function checkBase() {
+	for (var row = 0; row < 20; row++) {
+		for (var col = 0; col < 10; col++) {
+			if (cells[row][col].base) {
+				cells[row][col].className = "base";
+			}
+		}
 	}
 }

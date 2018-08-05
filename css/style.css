@@ -4,8 +4,20 @@ body {
 h1 {
 	color: #FFFFFF;
 }
+.container {
+	float: left;
+}
+#text {
+	width: 20%;
+	height: 100%;
+}
+#tetris {
+	width: 60%;
+	height: 100%;
+}
 #keyInfo {
 	text-align: left;
+	margin-left: 10px;
 }
 p {
 	color: #FFFFFF;
@@ -46,4 +58,7 @@ td {
 }
 .l {
 	background-color: #FF9800; /* orange */
+}
+.base {
+	background-color: #555555;
 }
