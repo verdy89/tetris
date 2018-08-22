@@ -3,10 +3,13 @@ document.getElementById("hello_text").textContent = "TETRIS";
 /* ---------- global variables ---------- */
 
 var moving = true;
+var gameover = false;
 var loop;
 
 var point = 0;
 var cells;
+var refresh_ms = 650; // 更新する間隔[ms]
+var level = 1;
 
 var blocks = { // ブロックのパターン
 	i: {
@@ -59,11 +62,11 @@ var blocks = { // ブロックのパターン
 		]
 	},
 }
+var blockArray = permulation([0, 1, 2, 3, 4, 5, 6]); // ブロックの出てくる順番
 
 var isFalling = false;
 var fallingBlockNum = 0;
 
-//var rotateCnt = 0;
 
 /* ---------- main ---------------------- */ 
 
@@ -78,12 +81,13 @@ function onKeyDown(event) {
 		moveLeft();
 	} else if (event.keyCode === 39 && moving) { // 右矢印キーで右移動
 		moveRight();
-	} else if (event.keyCode === 38 && moving) { // 上矢印キーで回転(未実装)
+	} else if (event.keyCode === 38 && moving) { // 上矢印キーで回転
 		rotate();
-		rotateCnt++;
 	} else if (event.keyCode === 40 && moving) { // 下矢印キーで落とす
 		fallTrough();
-	} else if (event.keyCode === 80) { // p で Pause/Restart
+	} else if (event.keyCode === 72 && moving) { // h で hold(未実装)
+		hold();
+	} else if (event.keyCode === 80 && !gameover) { // p で Pause/Restart
 		if (moving) {
 			document.getElementById("point").textContent = "Pause";
 			stop();
@@ -104,10 +108,17 @@ function mainLoop(){
 		/* タイトルのカウントアップ */
 		point++; // 何回目か数えるために変数pointを1ずつ増やす
 		document.getElementById("hello_text").textContent = "TETRIS";
-		document.getElementById("point").textContent = "Point = " + point; //何回目かを文字にまとめて表示する
+		document.getElementById("point").textContent = "Point: " + point; //何回目かを文字にまとめて表示する
+
+		/* 1000ポイントごとにレベルアップ */
+		if (level * 1000 < point) {
+			level++;
+			refresh_ms *= 0.9;
+		}
+		document.getElementById("level").textContent = "Level: " + level;
 
 		/* ゲーム続行確認 */
-		//checkGameOver();
+		checkGameOver();
 
 		/* ブロックを落とす */
 		if (hasFallingBlock()) {
@@ -118,7 +129,7 @@ function mainLoop(){
 		}
 
 		//checkBase();
-	}, 500);
+	}, refresh_ms);
 }
 
 function stop(){
@@ -144,9 +155,13 @@ function checkGameOver() {
 	for (var row = 0; row < 2; row++) {
 		for (var col = 0; col < 10; col++) {
 			if (cells[row][col].className !== "" && cells[row][col].blockNum !== fallingBlockNum) {
-				alert("GAME OVER!\nRestart: Press F5")
+				document.getElementById("information").textContent = "GAME OVER! Continue: Press F5";
+				//alert("GAME OVER!\nRestart: Press F5")
 				clearInterval(loop); // alert が出た後もカウントし続けると、無限に alert されてうざいので止める
 				// こうしても２つ alert が出ることがあって謎
+				// alert を使うのをやめた
+				gameover = true;
+				moving = false;
 			}
 		}
 	}
@@ -257,9 +272,21 @@ function generateNewBlock() { // ランダムにブロックを生成する
 
 	// 1. ブロックパターンからランダムに一つパターンを選ぶ
 	var keys = Object.keys(blocks);
-	var nextBlockKey = keys[Math.floor(Math.random() * keys.length)];
-	var nextBlock = blocks[nextBlockKey];
+	//var nextBlockKey = keys[Math.floor(Math.random() * keys.length)]; // 完全にランダム(これだと同じブロックが何度も連続して出てくることがある)
 	var nextFallingBlockNum = fallingBlockNum + 1;
+	if (nextFallingBlockNum % keys.length == 0) {
+		blockArray = permulation([0, 1, 2, 3, 4, 5, 6]);
+	}
+//	var nextBlockKey = (nextFallingBlockNum % blockArray.length == 0) ? keys[blockArray[blockArray.length - 1]] : keys[blockArray[nextFallingBlockNum % blockArray.length - 1]];
+	if (nextFallingBlockNum % blockArray.length == 0) {
+		var nextBlockKey = keys[blockArray[blockArray.length - 1]];
+	} else {
+		var nextBlockKey = keys[blockArray[nextFallingBlockNum % blockArray.length - 1]];
+	}
+	var nextBlock = blocks[nextBlockKey];
+	// 次の次のブロックの表示
+	var nextnextBlockKey = keys[blockArray[nextFallingBlockNum % blockArray.length]];
+	var nextnextBlock = blocks[nextnextBlockKey];
 
 	// 2. 選んだパターンをもとにブロックを配置する
 	var pattern = nextBlock.pattern;
@@ -269,7 +296,7 @@ function generateNewBlock() { // ランダムにブロックを生成する
 		for (var col = 0; col < pattern[row].length; col++) {
 			if (pattern[row][col]) {
 				cells[row][col+3].className = nextBlock.class; // 配置する位置は4マス目から
-				cells[row][col+3].blockNum = nextFallingBlockNum; // わからない
+				cells[row][col+3].blockNum = nextFallingBlockNum;
 			}
 		}
 	}
@@ -277,7 +304,6 @@ function generateNewBlock() { // ランダムにブロックを生成する
 	// 3. 落下中のブロックがあるとする
 	isFalling = true;
 	fallingBlockNum = nextFallingBlockNum;
-	rotateCnt = 0;
 }
 
 function moveRight() { // ブロックを右に移動させる
@@ -417,6 +443,17 @@ function fallTrough() { // 落ちるところまで落とす
 	while(isFalling) {
 		fallBlocks();
 	}
+}
+
+function permulation(array) { // ランダムに並び替えた順列の作成
+	var answer = [];
+	var n = array.length;
+	for (var i = 0; i < n; i++) {
+		pushKey = Math.floor(Math.random() * array.length);
+		answer.push(array[pushKey]);
+		array.splice(pushKey, 1);
+	}
+	return answer;
 }
 
 function checkBase() {
